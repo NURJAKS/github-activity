@@ -411,10 +411,39 @@
   color: #fff;
 }
 
-.findingsGrid {
+.resultContent {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
-  gap: 1.5rem;
+  grid-template-columns: 350px 1fr;
+  gap: 2rem;
+}
+
+@media (max-width: 1024px) {
+  .resultContent {
+    grid-template-columns: 1fr;
+  }
+}
+
+.radarContainer {
+  background: rgba(0,0,0,0.2);
+  border-radius: 16px;
+  padding: 1.5rem;
+  border: 1px solid rgba(255,255,255,0.05);
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+}
+
+.radarCaption {
+  text-align: center;
+  color: #64748b;
+  font-size: 0.85rem;
+  margin-top: 1rem;
+}
+
+.findingsGridVertical {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
 }
 
 .findingCard {

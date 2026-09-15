@@ -3,12 +3,12 @@
 import React, { useEffect, useState, useRef } from 'react';
 import { 
   BarChart, Bar, XAxis, YAxis, Tooltip, Legend, ResponsiveContainer, PieChart, Pie, Cell, 
-  CartesianGrid 
+  CartesianGrid, Radar, RadarChart, PolarGrid, PolarAngleAxis, PolarRadiusAxis 
 } from 'recharts';
 import { 
   ShieldAlert, CheckCircle, AlertTriangle, FileText, Activity, 
   TrendingDown, TrendingUp, DollarSign, Layers, FileSearch, 
-  UploadCloud, MonitorOff, Scissors, FileWarning, Search
+  UploadCloud, MonitorOff, Scissors, FileWarning, Search, Network
 } from 'lucide-react';
 import styles from './Dashboard.module.css';
 
@@ -78,7 +78,7 @@ export default function Dashboard() {
   const handleFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
     if (e.target.files && e.target.files.length > 0) {
       setSelectedFile(e.target.files[0]);
-      setAnalysisResult(null); // Сброс прошлого результата
+      setAnalysisResult(null); 
     }
   };
 
@@ -154,6 +154,25 @@ export default function Dashboard() {
     }))
     .slice(0, 15);
 
+  // Подготовка данных для Radar Chart на основе Mock результатов
+  let radarData = [];
+  if (analysisResult) {
+    radarData = analysisResult.findings.map(f => {
+      let score = 20; // норма
+      if (f.risk === 'высокий риск') score = 100;
+      if (f.risk === 'требует проверки') score = 60;
+      
+      let shortName = f.category;
+      if (shortName.includes("ИТ-разработка")) shortName = "ТЗ (ИТ)";
+      if (shortName.includes("Анализ Цен")) shortName = "Цены";
+      if (shortName.includes("Альтернативы")) shortName = "Аналоги";
+      if (shortName.includes("Дробление")) shortName = "Дробление";
+      if (shortName.includes("Целостность")) shortName = "Подделка PDF";
+
+      return { subject: shortName, A: score, fullMark: 100 };
+    });
+  }
+
   return (
     <div className={styles.dashboardWrapper}>
       <header className={styles.header}>
@@ -223,7 +242,7 @@ export default function Dashboard() {
                 disabled={isAnalyzing}
               >
                 {isAnalyzing ? (
-                  <><div className={styles.btnSpinner}></div> Анализируем...</>
+                  <><div className={styles.btnSpinner}></div> Обработка нейросетью...</>
                 ) : (
                   <><Search size={20} /> Запустить ИИ-Аудит</>
                 )}
@@ -238,19 +257,35 @@ export default function Dashboard() {
                 <div className={`${styles.badge} ${styles.high}`}>Общий риск: Высокий</div>
               </div>
 
-              <div className={styles.findingsGrid}>
-                {analysisResult.findings.map((f, i) => (
-                  <div key={i} className={styles.findingCard}>
-                    <div className={`${styles.findingIconBox} ${f.risk === 'высокий риск' ? styles.bgRed : styles.bgWarn}`}>
-                      {getIcon(f.icon)}
+              <div className={styles.resultContent}>
+                <div className={styles.radarContainer}>
+                  <h3 style={{color: "#e2e8f0", textAlign: "center", marginBottom: "1rem"}}><Network size={20} style={{verticalAlign: "middle", marginRight: 8}}/> Вектор Рисков (Граф)</h3>
+                  <ResponsiveContainer width="100%" height={300}>
+                    <RadarChart cx="50%" cy="50%" outerRadius="70%" data={radarData}>
+                      <PolarGrid stroke="rgba(255,255,255,0.1)" />
+                      <PolarAngleAxis dataKey="subject" tick={{fill: '#94a3b8', fontSize: 12}} />
+                      <PolarRadiusAxis angle={30} domain={[0, 100]} tick={false} axisLine={false} />
+                      <Radar name="Риск" dataKey="A" stroke="#ff4b4b" fill="#ff4b4b" fillOpacity={0.4} />
+                      <Tooltip contentStyle={{ backgroundColor: 'rgba(15,23,42,0.9)', border: '1px solid rgba(255,255,255,0.1)' }}/>
+                    </RadarChart>
+                  </ResponsiveContainer>
+                  <p className={styles.radarCaption}>Чем больше площадь, тем выше комплексный коррупционный риск документа.</p>
+                </div>
+
+                <div className={styles.findingsGridVertical}>
+                  {analysisResult.findings.map((f, i) => (
+                    <div key={i} className={styles.findingCard}>
+                      <div className={`${styles.findingIconBox} ${f.risk === 'высокий риск' ? styles.bgRed : styles.bgWarn}`}>
+                        {getIcon(f.icon)}
+                      </div>
+                      <div className={styles.findingContent}>
+                        <span className={styles.findingCategory}>{f.category}</span>
+                        <h4>{f.title}</h4>
+                        <p>{f.description}</p>
+                      </div>
                     </div>
-                    <div className={styles.findingContent}>
-                      <span className={styles.findingCategory}>{f.category}</span>
-                      <h4>{f.title}</h4>
-                      <p>{f.description}</p>
-                    </div>
-                  </div>
-                ))}
+                  ))}
+                </div>
               </div>
             </div>
           )}
