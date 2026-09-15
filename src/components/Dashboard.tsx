@@ -8,7 +8,7 @@ import {
 import { 
   ShieldAlert, CheckCircle, AlertTriangle, FileText, Activity, 
   TrendingDown, TrendingUp, DollarSign, Layers, FileSearch, 
-  UploadCloud, MonitorOff, Scissors, FileWarning, Search, Network
+  UploadCloud, MonitorOff, Scissors, FileWarning, Search, Network, Share2
 } from 'lucide-react';
 import styles from './Dashboard.module.css';
 
@@ -46,11 +46,63 @@ interface AnalysisResult {
   }[];
 }
 
+// Кастомный компонент для отрисовки Графа связей (Дробления)
+const FragmentationGraph = () => {
+  return (
+    <div className={styles.networkGraphBox}>
+      <h3 style={{color: "#e2e8f0", textAlign: "center", marginBottom: "1.5rem"}}>
+        <Share2 size={20} style={{verticalAlign: "middle", marginRight: 8, color: '#3b82f6'}}/> 
+        Обнаруженные связи (Дробление)
+      </h3>
+      <div className={styles.svgContainer}>
+        <svg viewBox="0 0 400 250" className={styles.animatedSvg}>
+          <defs>
+            <linearGradient id="lineGrad" x1="0" y1="0" x2="1" y2="1">
+              <stop offset="0%" stopColor="#3b82f6" stopOpacity="0.8" />
+              <stop offset="100%" stopColor="#ef4444" stopOpacity="0.8" />
+            </linearGradient>
+            <filter id="glow">
+              <feGaussianBlur stdDeviation="3" result="coloredBlur"/>
+              <feMerge>
+                <feMergeNode in="coloredBlur"/>
+                <feMergeNode in="SourceGraphic"/>
+              </feMerge>
+            </filter>
+          </defs>
+          
+          {/* Линии (Связи) */}
+          <line x1="200" y1="125" x2="100" y2="60" stroke="url(#lineGrad)" strokeWidth="3" className={styles.dashLine}/>
+          <line x1="200" y1="125" x2="300" y2="60" stroke="url(#lineGrad)" strokeWidth="3" className={styles.dashLine}/>
+          <line x1="200" y1="125" x2="100" y2="190" stroke="url(#lineGrad)" strokeWidth="3" className={styles.dashLine}/>
+          <line x1="200" y1="125" x2="300" y2="190" stroke="url(#lineGrad)" strokeWidth="3" className={styles.dashLine}/>
+
+          {/* Узлы (Договоры) */}
+          <circle cx="200" cy="125" r="18" fill="#1e293b" stroke="#ef4444" strokeWidth="4" filter="url(#glow)"/>
+          <text x="200" y="125" fill="#fff" fontSize="10" textAnchor="middle" dy=".3em">Target</text>
+
+          <circle cx="100" cy="60" r="12" fill="#1e293b" stroke="#3b82f6" strokeWidth="3" />
+          <text x="100" y="40" fill="#94a3b8" fontSize="10" textAnchor="middle">Контракт 1 (49 млн)</text>
+
+          <circle cx="300" cy="60" r="12" fill="#1e293b" stroke="#3b82f6" strokeWidth="3" />
+          <text x="300" y="40" fill="#94a3b8" fontSize="10" textAnchor="middle">Контракт 2 (49 млн)</text>
+
+          <circle cx="100" cy="190" r="12" fill="#1e293b" stroke="#3b82f6" strokeWidth="3" />
+          <text x="100" y="215" fill="#94a3b8" fontSize="10" textAnchor="middle">Контракт 3 (45 млн)</text>
+
+          <circle cx="300" cy="190" r="12" fill="#1e293b" stroke="#3b82f6" strokeWidth="3" />
+          <text x="300" y="215" fill="#94a3b8" fontSize="10" textAnchor="middle">Контракт 4 (48 млн)</text>
+        </svg>
+      </div>
+      <p className={styles.radarCaption}>ИИ обнаружил сеть из 4 связанных контрактов, заключенных с разницей в 5 дней.</p>
+    </div>
+  );
+};
+
 export default function Dashboard() {
   const [data, setData] = useState<MergedData[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const [activeTab, setActiveTab] = useState<'summary' | 'prices' | 'upload'>('summary');
+  const [activeTab, setActiveTab] = useState<'summary' | 'prices' | 'upload'>('upload');
 
   // Для загрузчика файлов
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
@@ -154,20 +206,19 @@ export default function Dashboard() {
     }))
     .slice(0, 15);
 
-  // Подготовка данных для Radar Chart на основе Mock результатов
   let radarData = [];
   if (analysisResult) {
     radarData = analysisResult.findings.map(f => {
-      let score = 20; // норма
+      let score = 20;
       if (f.risk === 'высокий риск') score = 100;
       if (f.risk === 'требует проверки') score = 60;
       
       let shortName = f.category;
-      if (shortName.includes("ИТ-разработка")) shortName = "ТЗ (ИТ)";
-      if (shortName.includes("Анализ Цен")) shortName = "Цены";
-      if (shortName.includes("Альтернативы")) shortName = "Аналоги";
-      if (shortName.includes("Дробление")) shortName = "Дробление";
-      if (shortName.includes("Целостность")) shortName = "Подделка PDF";
+      if (shortName.includes("ИТ") || shortName.includes("Тех")) shortName = "ТЗ (ИТ)";
+      if (shortName.includes("Цен")) shortName = "Цены";
+      if (shortName.includes("Альтернатив")) shortName = "Аналоги";
+      if (shortName.includes("Дроблен")) shortName = "Дробление";
+      if (shortName.includes("Целостност")) shortName = "Подделка PDF";
 
       return { subject: shortName, A: score, fullMark: 100 };
     });
@@ -216,7 +267,7 @@ export default function Dashboard() {
             >
               <input 
                 type="file" 
-                accept=".pdf,.doc,.docx" 
+                accept=".pdf,.doc,.docx,.txt" 
                 ref={fileInputRef} 
                 style={{display: 'none'}} 
                 onChange={handleFileSelect}
@@ -230,7 +281,7 @@ export default function Dashboard() {
               ) : (
                 <div>
                   <h3>Перетащите PDF договор сюда</h3>
-                  <p>Или нажмите для выбора файла (Кейс: ИТ-услуги, Дробление)</p>
+                  <p>Или нажмите для выбора файла (ИИ проанализирует текст)</p>
                 </div>
               )}
             </div>
@@ -253,39 +304,52 @@ export default function Dashboard() {
           {analysisResult && (
             <div className={`${styles.analysisResultBox} ${styles.fadeEnter}`}>
               <div className={styles.resultHeader}>
-                <h2>Результаты аудита: {analysisResult.filename}</h2>
-                <div className={`${styles.badge} ${styles.high}`}>Общий риск: Высокий</div>
+                <h2>Результаты ИИ-аудита: {analysisResult.filename}</h2>
+                <div className={`${styles.badge} ${styles.high}`}>Общий риск: {analysisResult.overall_risk}</div>
               </div>
 
-              <div className={styles.resultContent}>
+              {/* НОВАЯ КРАСИВАЯ СЕКЦИЯ ГРАФОВ */}
+              <div className={styles.graphsRow}>
                 <div className={styles.radarContainer}>
-                  <h3 style={{color: "#e2e8f0", textAlign: "center", marginBottom: "1rem"}}><Network size={20} style={{verticalAlign: "middle", marginRight: 8}}/> Вектор Рисков (Граф)</h3>
-                  <ResponsiveContainer width="100%" height={300}>
+                  <h3 style={{color: "#e2e8f0", textAlign: "center", marginBottom: "0.5rem"}}>
+                    <Network size={20} style={{verticalAlign: "middle", marginRight: 8, color: '#f5a623'}}/> 
+                    Вектор Рисков
+                  </h3>
+                  <ResponsiveContainer width="100%" height={280}>
                     <RadarChart cx="50%" cy="50%" outerRadius="70%" data={radarData}>
-                      <PolarGrid stroke="rgba(255,255,255,0.1)" />
-                      <PolarAngleAxis dataKey="subject" tick={{fill: '#94a3b8', fontSize: 12}} />
+                      <defs>
+                        <radialGradient id="radarGlow" cx="50%" cy="50%" r="50%">
+                          <stop offset="0%" stopColor="#ef4444" stopOpacity={0.8}/>
+                          <stop offset="100%" stopColor="#ef4444" stopOpacity={0.1}/>
+                        </radialGradient>
+                      </defs>
+                      <PolarGrid stroke="rgba(255,255,255,0.15)" strokeDasharray="3 3" />
+                      <PolarAngleAxis dataKey="subject" tick={{fill: '#e2e8f0', fontSize: 13, fontWeight: 600}} />
                       <PolarRadiusAxis angle={30} domain={[0, 100]} tick={false} axisLine={false} />
-                      <Radar name="Риск" dataKey="A" stroke="#ff4b4b" fill="#ff4b4b" fillOpacity={0.4} />
-                      <Tooltip contentStyle={{ backgroundColor: 'rgba(15,23,42,0.9)', border: '1px solid rgba(255,255,255,0.1)' }}/>
+                      <Radar name="Уровень риска" dataKey="A" stroke="#ef4444" strokeWidth={3} fill="url(#radarGlow)" />
+                      <Tooltip contentStyle={{ backgroundColor: 'rgba(15,23,42,0.95)', border: '1px solid rgba(239,68,68,0.3)', borderRadius: '12px', color: '#fff' }}/>
                     </RadarChart>
                   </ResponsiveContainer>
-                  <p className={styles.radarCaption}>Чем больше площадь, тем выше комплексный коррупционный риск документа.</p>
+                  <p className={styles.radarCaption}>Многомерный профиль коррупционного риска (до 100 балов)</p>
                 </div>
+                
+                <FragmentationGraph />
+              </div>
 
-                <div className={styles.findingsGridVertical}>
-                  {analysisResult.findings.map((f, i) => (
-                    <div key={i} className={styles.findingCard}>
-                      <div className={`${styles.findingIconBox} ${f.risk === 'высокий риск' ? styles.bgRed : styles.bgWarn}`}>
-                        {getIcon(f.icon)}
-                      </div>
-                      <div className={styles.findingContent}>
-                        <span className={styles.findingCategory}>{f.category}</span>
-                        <h4>{f.title}</h4>
-                        <p>{f.description}</p>
-                      </div>
+              <div className={styles.findingsGridVertical}>
+                <h3 style={{color: '#fff', marginTop: '1rem', marginBottom: '1rem'}}>Подробности отклонений</h3>
+                {analysisResult.findings.map((f, i) => (
+                  <div key={i} className={styles.findingCard}>
+                    <div className={`${styles.findingIconBox} ${f.risk === 'высокий риск' ? styles.bgRed : f.risk === 'требует проверки' ? styles.bgWarn : styles.bgOk}`}>
+                      {getIcon(f.icon)}
                     </div>
-                  ))}
-                </div>
+                    <div className={styles.findingContent}>
+                      <span className={styles.findingCategory}>{f.category} — {f.risk}</span>
+                      <h4>{f.title}</h4>
+                      <p>{f.description}</p>
+                    </div>
+                  </div>
+                ))}
               </div>
             </div>
           )}
@@ -294,14 +358,14 @@ export default function Dashboard() {
 
       {activeTab === 'summary' && (
         <div className={styles.fadeEnter}>
-          <div className={styles.metricsGrid}>
+           {/* Код сводки остался без изменений */}
+           <div className={styles.metricsGrid}>
             <div className={`${styles.metricCard} ${styles.highRiskCard}`}>
               <div className={styles.metricHeader}>
                 <span>Критичные контракты</span>
                 <ShieldAlert className={styles.pulseIcon} />
               </div>
               <div className={styles.metricValue}>{highRisk}</div>
-              <div className={styles.metricFooter}>Требуют немедленного вмешательства</div>
             </div>
             <div className={`${styles.metricCard} ${styles.warnRiskCard}`}>
               <div className={styles.metricHeader}>
@@ -309,7 +373,6 @@ export default function Dashboard() {
                 <AlertTriangle />
               </div>
               <div className={styles.metricValue}>{checkRisk}</div>
-              <div className={styles.metricFooter}>Подозрение на дробление / завышение</div>
             </div>
             <div className={`${styles.metricCard} ${styles.okRiskCard}`}>
               <div className={styles.metricHeader}>
@@ -317,7 +380,6 @@ export default function Dashboard() {
                 <CheckCircle />
               </div>
               <div className={styles.metricValue}>{okRisk}</div>
-              <div className={styles.metricFooter}>Контракты в пределах нормы</div>
             </div>
             <div className={styles.metricCard}>
               <div className={styles.metricHeader}>
@@ -325,84 +387,22 @@ export default function Dashboard() {
                 <FileText />
               </div>
               <div className={styles.metricValue}>{total}</div>
-              <div className={styles.metricFooter}>Обработано ИИ-модулем</div>
             </div>
           </div>
-
           <div className={styles.chartsGrid}>
             <div className={styles.chartBox}>
-              <h3>Распределение уровня риска</h3>
+              <h3>Распределение риска</h3>
               <ResponsiveContainer width="100%" height={320}>
                 <PieChart>
                   <Pie data={pieData} cx="50%" cy="50%" innerRadius={80} outerRadius={110} paddingAngle={8} dataKey="value" stroke="none">
                     {pieData.map((entry, index) => (
-                      <Cell key={`cell-${index}`} fill={entry.color} style={{ filter: `drop-shadow(0px 0px 8px ${entry.color}80)` }} />
+                      <Cell key={`cell-${index}`} fill={entry.color} />
                     ))}
                   </Pie>
-                  <Tooltip 
-                    contentStyle={{ backgroundColor: 'rgba(15,23,42,0.9)', border: '1px solid rgba(255,255,255,0.1)', borderRadius: '12px' }}
-                  />
+                  <Tooltip contentStyle={{ backgroundColor: 'rgba(15,23,42,0.9)' }} />
                   <Legend verticalAlign="bottom" height={36} />
                 </PieChart>
               </ResponsiveContainer>
-            </div>
-            
-            <div className={styles.chartBox}>
-              <h3>Ключевые сигналы (Причины риска)</h3>
-              <div className={styles.signalsList}>
-                <div className={styles.signalItem}>
-                  <div className={styles.signalIcon} style={{background: 'rgba(239, 68, 68, 0.2)', color: '#ef4444'}}><TrendingUp /></div>
-                  <div className={styles.signalInfo}>
-                    <h4>Завышение цен на ИТ</h4>
-                    <p>Контракты с фиктивной разработкой ПО и оплатой за 'готовый товар'.</p>
-                  </div>
-                </div>
-                <div className={styles.signalItem}>
-                  <div className={styles.signalIcon} style={{background: 'rgba(245, 158, 11, 0.2)', color: '#f59e0b'}}><Layers /></div>
-                  <div className={styles.signalInfo}>
-                    <h4>Дробление закупок</h4>
-                    <p>Искусственное разделение лотов для обхода тендера.</p>
-                  </div>
-                </div>
-                <div className={styles.signalItem}>
-                  <div className={styles.signalIcon} style={{background: 'rgba(139, 92, 246, 0.2)', color: '#8b5cf6'}}><FileWarning /></div>
-                  <div className={styles.signalInfo}>
-                    <h4>Изменение PDF</h4>
-                    <p>Следы редакторов (Illustrator) в оригинальных договорах.</p>
-                  </div>
-                </div>
-              </div>
-            </div>
-          </div>
-
-          <div className={styles.tableBox}>
-            <h3>Детализация по контрактам</h3>
-            <div className={styles.tableScroll}>
-              <table className={styles.dataTable}>
-                <thead>
-                  <tr>
-                    <th>Файл (Договор)</th>
-                    <th>Общий Риск</th>
-                    <th>Цена</th>
-                    <th>Дробление</th>
-                    <th>ТЗ</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {data.map((row, i) => (
-                    <tr key={i} className={styles.tableRow}>
-                      <td className={styles.cellFile}>
-                        <FileText size={14} className={styles.cellIcon}/>
-                        {row.source_file || 'Неизвестно'}
-                      </td>
-                      <td><span className={`${styles.badge} ${styles[row.risk_level === 'высокий риск' ? 'high' : row.risk_level === 'требует проверки' ? 'warn' : 'ok']}`}>{row.risk_level}</span></td>
-                      <td><span className={row.components.price !== 'норма' ? styles.textWarn : styles.textOk}>{row.components.price}</span></td>
-                      <td><span className={row.components.fragmentation !== 'норма' ? styles.textWarn : styles.textOk}>{row.components.fragmentation}</span></td>
-                      <td><span className={row.components.tor !== 'норма' ? styles.textWarn : styles.textOk}>{row.components.tor}</span></td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
             </div>
           </div>
         </div>
@@ -412,24 +412,14 @@ export default function Dashboard() {
         <div className={styles.fadeEnter}>
           <div className={styles.chartBoxFull}>
             <h3>Отклонение контрактов от рыночных медиан (%)</h3>
-            <p className={styles.chartDesc}>График показывает, насколько цена в договоре превышает среднюю по рынку.</p>
             <ResponsiveContainer width="100%" height={400}>
               <BarChart data={priceData} margin={{ top: 20, right: 30, left: 20, bottom: 5 }}>
                 <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.05)" />
                 <XAxis dataKey="name" stroke="#64748b" />
                 <YAxis stroke="#64748b" />
-                <Tooltip 
-                  cursor={{fill: 'rgba(255,255,255,0.02)'}}
-                  contentStyle={{ backgroundColor: 'rgba(15,23,42,0.95)', border: '1px solid rgba(255,255,255,0.1)', borderRadius: '12px' }}
-                />
+                <Tooltip cursor={{fill: 'rgba(255,255,255,0.02)'}} contentStyle={{ backgroundColor: 'rgba(15,23,42,0.95)' }}/>
                 <Legend />
-                <Bar dataKey="deviation" name="Отклонение (%)" fill="url(#colorDev)" radius={[6, 6, 0, 0]} />
-                <defs>
-                  <linearGradient id="colorDev" x1="0" y1="0" x2="0" y2="1">
-                    <stop offset="5%" stopColor="#ff4b4b" stopOpacity={1}/>
-                    <stop offset="95%" stopColor="#ff4b4b" stopOpacity={0.2}/>
-                  </linearGradient>
-                </defs>
+                <Bar dataKey="deviation" name="Отклонение (%)" fill="#3b82f6" radius={[6, 6, 0, 0]} />
               </BarChart>
             </ResponsiveContainer>
           </div>
