@@ -2,9 +2,15 @@ const express = require('express');
 const fs = require('fs');
 const path = require('path');
 const multer = require('multer');
+const OpenAI = require('openai');
+const pdfParse = require('pdf-parse');
 
 const app = express();
 const PORT = process.env.PORT || 3000;
+
+const openai = new OpenAI({
+  apiKey: process.env.OPENAI_API_KEY
+});
 
 // Настройка multer для приема файлов (в память)
 const upload = multer({ storage: multer.memoryStorage() });
@@ -58,9 +64,9 @@ const torComponent = (rec) => {
 };
 
 // -------------------------------------------------------------
-// НОВЫЙ ЭНДПОИНТ: АНАЛИЗ ЗАГРУЖЕННОГО ДОГОВОРА (MOCK AI)
+// РЕАЛЬНЫЙ ИИ-АНАЛИЗ ЗАГРУЖЕННОГО ДОГОВОРА ЧЕРЕЗ OPENAI
 // -------------------------------------------------------------
-app.post('/api/analyze', upload.single('file'), (req, res) => {
+app.post('/api/analyze', upload.single('file'), async (req, res) => {
   if (!req.file) {
     return res.status(400).json({ error: 'Файл не найден' });
   }
@@ -68,56 +74,69 @@ app.post('/api/analyze', upload.single('file'), (req, res) => {
   // Исправляем кодировку имени файла (multer часто читает utf-8 как latin1)
   const filename = Buffer.from(req.file.originalname, 'latin1').toString('utf8');
   
-  // Имитация работы ИИ (задержка 2.5 секунды для "Вау-эффекта")
-  setTimeout(() => {
-    // В зависимости от имени файла можно отдавать разные результаты, но для демо дадим сочный кейс
-    const analysisResult = {
-      filename: filename,
-      overall_risk: "высокий риск",
-      findings: [
-        {
-          category: "ИТ-разработка (Тех. Спецификация)",
-          risk: "высокий риск",
-          title: "Фиктивная разработка ПО",
-          description: "Выявлено отсутствие технического смысла в спецификации. Продукт описан общими словами, предполагается оплата за 'готовый товар', а не за разработку. Возможна поставка шаблонного Web-решения под видом нативного мобильного приложения.",
-          icon: "MonitorOff"
-        },
-        {
-          category: "Анализ Цен (Завышение)",
-          risk: "высокий риск",
-          title: "Аномальное отклонение цены",
-          description: "Заявленная стоимость услуг на 450% превышает медиану по рынку. Выявлены завышенные статьи расходов на 'сопровождение'.",
-          icon: "TrendingUp"
-        },
-        {
-          category: "Альтернативы на рынке",
-          risk: "требует проверки",
-          title: "Наличие дешевых аналогов",
-          description: "На рынке существуют готовые SaaS решения аналогичного функционала, стоимость которых в 10 раз ниже суммы контракта.",
-          icon: "Layers"
-        },
-        {
-          category: "Дробление закупок",
-          risk: "высокий риск",
-          title: "Искусственное дробление",
-          description: "Связь с 3 другими контрактами от того же заказчика (разница в датах < 5 дней, суммы чуть ниже порога конкурса). Общая сумма цепочки: 94.8 млн тг.",
-          icon: "Scissors"
-        },
-        {
-          category: "Целостность PDF (Integrity)",
-          risk: "требует проверки",
-          title: "Следы редактирования",
-          description: "Метаданные документа указывают на использование Adobe Illustrator после наложения ЭЦП/печатей. Возможна подделка.",
-          icon: "FileWarning"
-        }
-      ]
-    };
+  try {
+    let text = "";
+    if (filename.toLowerCase().endsWith('.pdf')) {
+      const data = await pdfParse(req.file.buffer);
+      text = data.text;
+    } else {
+      // Для txt/docx попытаемся прочесть как строку (базово)
+      text = req.file.buffer.toString('utf8');
+    }
+
+    // Ограничиваем длину текста, чтобы не выйти за лимиты токенов GPT
+    text = text.substring(0, 15000);
+
+    const prompt = `
+Ты - строгий ИИ-аудитор госзакупок Казахстана. 
+Твоя задача - проанализировать предоставленный текст договора и выявить коррупционные риски.
+Ищи следующие маркеры:
+1. Фиктивная ИТ-разработка (завышение цены, разработка без тех. смысла, оплата за "готовый товар" вместо реальной разработки).
+2. Аномальное отклонение цены (завышена ли цена по рынку).
+3. Наличие дешевых аналогов (можно ли было купить готовое SaaS решение вместо заказной разработки).
+4. Дробление закупок (есть ли признаки намеренного дробления бюджета, чтобы обойти конкурсные процедуры).
+5. Специфичное ТЗ (нет ли сговора под конкретного поставщика).
+
+ОБЯЗАТЕЛЬНО ВЕРНИ ОТВЕТ СТРОГО В ФОРМАТЕ JSON, без блоков кода (\`\`\`). Формат:
+{
+  "filename": "${filename}",
+  "overall_risk": "высокий риск" или "требует проверки" или "норма",
+  "findings": [
+    {
+      "category": "ИТ-разработка (Тех. Спецификация)" или "Анализ Цен (Завышение)" или "Альтернативы на рынке" или "Дробление закупок" или "Целостность ТЗ",
+      "risk": "высокий риск" или "требует проверки" или "норма",
+      "title": "Краткий заголовок проблемы",
+      "description": "Детальное описание того, что ты нашел в тексте.",
+      "icon": "MonitorOff" или "TrendingUp" или "Layers" или "Scissors" или "FileWarning"
+    }
+  ]
+}
+Обязательно включи от 3 до 5 объектов в массив findings на основе текста. 
+
+Текст документа:
+${text}
+    `;
+
+    const completion = await openai.chat.completions.create({
+      model: "gpt-4o-mini",
+      messages: [{ role: "system", content: prompt }],
+      temperature: 0.1,
+    });
+
+    const aiContent = completion.choices[0].message.content.trim();
     
+    // Очистка от возможных маркдаун-блоков ```json
+    const jsonStr = aiContent.replace(/^```json/gi, '').replace(/```$/g, '').trim();
+    const result = JSON.parse(jsonStr);
+
     res.json({
       status: 'success',
-      data: analysisResult
+      data: result
     });
-  }, 2500); // 2.5 секунды
+  } catch (error) {
+    console.error("AI Analysis Error:", error);
+    res.status(500).json({ error: "Ошибка при анализе файла ИИ: " + error.message });
+  }
 });
 
 // -------------------------------------------------------------
@@ -192,7 +211,7 @@ app.get('/api/dashboard-data', (req, res) => {
 });
 
 app.get('/', (req, res) => {
-  res.send('API Audit Backend is running!');
+  res.send('API Audit Backend is running with OpenAI integration!');
 });
 
 app.listen(PORT, () => {
