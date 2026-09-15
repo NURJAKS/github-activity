@@ -75,8 +75,12 @@ app.post('/api/analyze', upload.single('file'), async (req, res) => {
   const filename = Buffer.from(req.file.originalname, 'latin1').toString('utf8');
   const fnameLower = filename.toLowerCase();
 
+  // Искусственная задержка для демо (чтобы ИИ казался "думающим")
+  const fakeThinkingDelay = () => new Promise(resolve => setTimeout(resolve, 6500));
+
   // Хак для презентации: Идеальный договор
   if (fnameLower.includes('true dogovor') || fnameLower.includes('contract_orig_24817970.pdf')) {
+    await fakeThinkingDelay();
     return res.json({
       status: 'success',
       data: {
@@ -118,6 +122,7 @@ app.post('/api/analyze', upload.single('file'), async (req, res) => {
 
   // Хак для презентации: Плохой договор (Фейк / Коррупция)
   if (fnameLower.includes('fake dogovor')) {
+    await fakeThinkingDelay();
     return res.json({
       status: 'success',
       data: {
