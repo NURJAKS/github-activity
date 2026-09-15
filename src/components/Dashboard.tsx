@@ -46,7 +46,6 @@ interface AnalysisResult {
   }[];
 }
 
-// Кастомный компонент для отрисовки Графа связей (Дробления)
 const FragmentationGraph = () => {
   return (
     <div className={styles.networkGraphBox}>
@@ -70,13 +69,11 @@ const FragmentationGraph = () => {
             </filter>
           </defs>
           
-          {/* Линии (Связи) */}
           <line x1="200" y1="125" x2="100" y2="60" stroke="url(#lineGrad)" strokeWidth="3" className={styles.dashLine}/>
           <line x1="200" y1="125" x2="300" y2="60" stroke="url(#lineGrad)" strokeWidth="3" className={styles.dashLine}/>
           <line x1="200" y1="125" x2="100" y2="190" stroke="url(#lineGrad)" strokeWidth="3" className={styles.dashLine}/>
           <line x1="200" y1="125" x2="300" y2="190" stroke="url(#lineGrad)" strokeWidth="3" className={styles.dashLine}/>
 
-          {/* Узлы (Договоры) */}
           <circle cx="200" cy="125" r="18" fill="#1e293b" stroke="#ef4444" strokeWidth="4" filter="url(#glow)"/>
           <text x="200" y="125" fill="#fff" fontSize="10" textAnchor="middle" dy=".3em">Target</text>
 
@@ -102,9 +99,8 @@ export default function Dashboard() {
   const [data, setData] = useState<MergedData[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const [activeTab, setActiveTab] = useState<'summary' | 'prices' | 'upload'>('upload');
+  const [activeTab, setActiveTab] = useState<'summary' | 'prices' | 'upload'>('summary');
 
-  // Для загрузчика файлов
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
   const [isAnalyzing, setIsAnalyzing] = useState(false);
   const [analysisResult, setAnalysisResult] = useState<AnalysisResult | null>(null);
@@ -207,7 +203,7 @@ export default function Dashboard() {
     }))
     .slice(0, 15);
 
-  let radarData = [];
+  let radarData: any[] = [];
   if (analysisResult) {
     radarData = analysisResult.findings.map(f => {
       let score = 20;
@@ -268,7 +264,7 @@ export default function Dashboard() {
             >
               <input 
                 type="file" 
-                accept=".pdf,.doc,.docx,.txt" 
+                accept=".pdf,.doc,.docx" 
                 ref={fileInputRef} 
                 style={{display: 'none'}} 
                 onChange={handleFileSelect}
@@ -305,11 +301,10 @@ export default function Dashboard() {
           {analysisResult && (
             <div className={`${styles.analysisResultBox} ${styles.fadeEnter}`}>
               <div className={styles.resultHeader}>
-                <h2>Результаты ИИ-аудита: {analysisResult.filename}</h2>
-                <div className={`${styles.badge} ${styles.high}`}>Общий риск: {analysisResult.overall_risk}</div>
+                <h2>Результаты аудита: {analysisResult.filename}</h2>
+                <div className={`${styles.badge} ${analysisResult.overall_risk === 'высокий риск' ? styles.high : styles.ok}`}>{analysisResult.overall_risk}</div>
               </div>
 
-              {/* НОВАЯ КРАСИВАЯ СЕКЦИЯ ГРАФОВ */}
               <div className={styles.graphsRow}>
                 <div className={styles.radarContainer}>
                   <h3 style={{color: "#e2e8f0", textAlign: "center", marginBottom: "0.5rem"}}>
@@ -331,7 +326,7 @@ export default function Dashboard() {
                       <Tooltip contentStyle={{ backgroundColor: 'rgba(15,23,42,0.95)', border: '1px solid rgba(239,68,68,0.3)', borderRadius: '12px', color: '#fff' }}/>
                     </RadarChart>
                   </ResponsiveContainer>
-                  <p className={styles.radarCaption}>Многомерный профиль коррупционного риска (до 100 балов)</p>
+                  <p className={styles.radarCaption}>Многомерный профиль коррупционного риска (до 100 баллов)</p>
                 </div>
                 
                 <FragmentationGraph />
@@ -359,14 +354,14 @@ export default function Dashboard() {
 
       {activeTab === 'summary' && (
         <div className={styles.fadeEnter}>
-           {/* Код сводки остался без изменений */}
-           <div className={styles.metricsGrid}>
+          <div className={styles.metricsGrid}>
             <div className={`${styles.metricCard} ${styles.highRiskCard}`}>
               <div className={styles.metricHeader}>
                 <span>Критичные контракты</span>
                 <ShieldAlert className={styles.pulseIcon} />
               </div>
               <div className={styles.metricValue}>{highRisk}</div>
+              <div className={styles.metricFooter}>Требуют немедленного вмешательства</div>
             </div>
             <div className={`${styles.metricCard} ${styles.warnRiskCard}`}>
               <div className={styles.metricHeader}>
@@ -374,6 +369,7 @@ export default function Dashboard() {
                 <AlertTriangle />
               </div>
               <div className={styles.metricValue}>{checkRisk}</div>
+              <div className={styles.metricFooter}>Подозрение на дробление / завышение</div>
             </div>
             <div className={`${styles.metricCard} ${styles.okRiskCard}`}>
               <div className={styles.metricHeader}>
@@ -381,6 +377,7 @@ export default function Dashboard() {
                 <CheckCircle />
               </div>
               <div className={styles.metricValue}>{okRisk}</div>
+              <div className={styles.metricFooter}>Контракты в пределах нормы</div>
             </div>
             <div className={styles.metricCard}>
               <div className={styles.metricHeader}>
@@ -388,22 +385,84 @@ export default function Dashboard() {
                 <FileText />
               </div>
               <div className={styles.metricValue}>{total}</div>
+              <div className={styles.metricFooter}>Обработано ИИ-модулем</div>
             </div>
           </div>
+
           <div className={styles.chartsGrid}>
             <div className={styles.chartBox}>
-              <h3>Распределение риска</h3>
+              <h3>Распределение уровня риска</h3>
               <ResponsiveContainer width="100%" height={320}>
                 <PieChart>
                   <Pie data={pieData} cx="50%" cy="50%" innerRadius={80} outerRadius={110} paddingAngle={8} dataKey="value" stroke="none">
                     {pieData.map((entry, index) => (
-                      <Cell key={`cell-${index}`} fill={entry.color} />
+                      <Cell key={`cell-${index}`} fill={entry.color} style={{ filter: `drop-shadow(0px 0px 8px ${entry.color}80)` }} />
                     ))}
                   </Pie>
-                  <Tooltip contentStyle={{ backgroundColor: 'rgba(15,23,42,0.9)' }} />
+                  <Tooltip 
+                    contentStyle={{ backgroundColor: 'rgba(15,23,42,0.9)', border: '1px solid rgba(255,255,255,0.1)', borderRadius: '12px' }}
+                  />
                   <Legend verticalAlign="bottom" height={36} />
                 </PieChart>
               </ResponsiveContainer>
+            </div>
+            
+            <div className={styles.chartBox}>
+              <h3>Ключевые сигналы (Причины риска)</h3>
+              <div className={styles.signalsList}>
+                <div className={styles.signalItem}>
+                  <div className={styles.signalIcon} style={{background: 'rgba(239, 68, 68, 0.2)', color: '#ef4444'}}><TrendingUp /></div>
+                  <div className={styles.signalInfo}>
+                    <h4>Завышение цен на ИТ</h4>
+                    <p>Контракты с фиктивной разработкой ПО и оплатой за 'готовый товар'.</p>
+                  </div>
+                </div>
+                <div className={styles.signalItem}>
+                  <div className={styles.signalIcon} style={{background: 'rgba(245, 158, 11, 0.2)', color: '#f59e0b'}}><Layers /></div>
+                  <div className={styles.signalInfo}>
+                    <h4>Дробление закупок</h4>
+                    <p>Искусственное разделение лотов для обхода тендера.</p>
+                  </div>
+                </div>
+                <div className={styles.signalItem}>
+                  <div className={styles.signalIcon} style={{background: 'rgba(139, 92, 246, 0.2)', color: '#8b5cf6'}}><FileWarning /></div>
+                  <div className={styles.signalInfo}>
+                    <h4>Изменение PDF</h4>
+                    <p>Следы редакторов (Illustrator) в оригинальных договорах.</p>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <div className={styles.tableBox}>
+            <h3>Детализация по контрактам</h3>
+            <div className={styles.tableScroll}>
+              <table className={styles.dataTable}>
+                <thead>
+                  <tr>
+                    <th>Файл (Договор)</th>
+                    <th>Общий Риск</th>
+                    <th>Цена</th>
+                    <th>Дробление</th>
+                    <th>ТЗ</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {data.map((row, i) => (
+                    <tr key={i} className={styles.tableRow}>
+                      <td className={styles.cellFile}>
+                        <FileText size={14} className={styles.cellIcon}/>
+                        {row.source_file || 'Неизвестно'}
+                      </td>
+                      <td><span className={`${styles.badge} ${styles[row.risk_level === 'высокий риск' ? 'high' : row.risk_level === 'требует проверки' ? 'warn' : 'ok']}`}>{row.risk_level}</span></td>
+                      <td><span className={row.components.price !== 'норма' ? styles.textWarn : styles.textOk}>{row.components.price}</span></td>
+                      <td><span className={row.components.fragmentation !== 'норма' ? styles.textWarn : styles.textOk}>{row.components.fragmentation}</span></td>
+                      <td><span className={row.components.tor !== 'норма' ? styles.textWarn : styles.textOk}>{row.components.tor}</span></td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
             </div>
           </div>
         </div>
@@ -413,14 +472,24 @@ export default function Dashboard() {
         <div className={styles.fadeEnter}>
           <div className={styles.chartBoxFull}>
             <h3>Отклонение контрактов от рыночных медиан (%)</h3>
+            <p className={styles.chartDesc}>График показывает, насколько цена в договоре превышает среднюю по рынку.</p>
             <ResponsiveContainer width="100%" height={400}>
               <BarChart data={priceData} margin={{ top: 20, right: 30, left: 20, bottom: 5 }}>
                 <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.05)" />
                 <XAxis dataKey="name" stroke="#64748b" />
                 <YAxis stroke="#64748b" />
-                <Tooltip cursor={{fill: 'rgba(255,255,255,0.02)'}} contentStyle={{ backgroundColor: 'rgba(15,23,42,0.95)' }}/>
+                <Tooltip 
+                  cursor={{fill: 'rgba(255,255,255,0.02)'}}
+                  contentStyle={{ backgroundColor: 'rgba(15,23,42,0.95)', border: '1px solid rgba(255,255,255,0.1)', borderRadius: '12px' }}
+                />
                 <Legend />
-                <Bar dataKey="deviation" name="Отклонение (%)" fill="#3b82f6" radius={[6, 6, 0, 0]} />
+                <Bar dataKey="deviation" name="Отклонение (%)" fill="url(#colorDev)" radius={[6, 6, 0, 0]} />
+                <defs>
+                  <linearGradient id="colorDev" x1="0" y1="0" x2="0" y2="1">
+                    <stop offset="5%" stopColor="#ff4b4b" stopOpacity={1}/>
+                    <stop offset="95%" stopColor="#ff4b4b" stopOpacity={0.2}/>
+                  </linearGradient>
+                </defs>
               </BarChart>
             </ResponsiveContainer>
           </div>
