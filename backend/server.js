@@ -65,7 +65,8 @@ app.post('/api/analyze', upload.single('file'), (req, res) => {
     return res.status(400).json({ error: 'Файл не найден' });
   }
 
-  const filename = req.file.originalname;
+  // Исправляем кодировку имени файла (multer часто читает utf-8 как latin1)
+  const filename = Buffer.from(req.file.originalname, 'latin1').toString('utf8');
   
   // Имитация работы ИИ (задержка 2.5 секунды для "Вау-эффекта")
   setTimeout(() => {
