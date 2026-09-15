@@ -178,6 +178,7 @@ export default function Dashboard() {
       case 'Layers': return <Layers size={24} />;
       case 'Scissors': return <Scissors size={24} />;
       case 'FileWarning': return <FileWarning size={24} />;
+      case 'CheckCircle': return <CheckCircle size={24} />;
       default: return <Search size={24} />;
     }
   };
