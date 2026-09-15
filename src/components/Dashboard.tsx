@@ -1,17 +1,17 @@
 'use client';
 
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useRef } from 'react';
 import { 
   BarChart, Bar, XAxis, YAxis, Tooltip, Legend, ResponsiveContainer, PieChart, Pie, Cell, 
-  AreaChart, Area, CartesianGrid 
+  CartesianGrid 
 } from 'recharts';
 import { 
   ShieldAlert, CheckCircle, AlertTriangle, FileText, Activity, 
-  TrendingDown, TrendingUp, DollarSign, Layers, FileSearch 
+  TrendingDown, TrendingUp, DollarSign, Layers, FileSearch, 
+  UploadCloud, MonitorOff, Scissors, FileWarning, Search
 } from 'lucide-react';
 import styles from './Dashboard.module.css';
 
-// Типы
 type RiskLevel = 'норма' | 'требует проверки' | 'высокий риск';
 
 interface MergedData {
@@ -34,11 +34,29 @@ interface MergedData {
   reasons: string[];
 }
 
+interface AnalysisResult {
+  filename: string;
+  overall_risk: string;
+  findings: {
+    category: string;
+    risk: string;
+    title: string;
+    description: string;
+    icon: string;
+  }[];
+}
+
 export default function Dashboard() {
   const [data, setData] = useState<MergedData[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const [activeTab, setActiveTab] = useState<'summary' | 'prices'>('summary');
+  const [activeTab, setActiveTab] = useState<'summary' | 'prices' | 'upload'>('summary');
+
+  // Для загрузчика файлов
+  const [selectedFile, setSelectedFile] = useState<File | null>(null);
+  const [isAnalyzing, setIsAnalyzing] = useState(false);
+  const [analysisResult, setAnalysisResult] = useState<AnalysisResult | null>(null);
+  const fileInputRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
     const fetchData = async () => {
@@ -57,10 +75,64 @@ export default function Dashboard() {
     fetchData();
   }, []);
 
-  if (loading) return <div className={styles.loadingContainer}><div className={styles.spinner}></div><p>Анализ данных аудита...</p></div>;
+  const handleFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
+    if (e.target.files && e.target.files.length > 0) {
+      setSelectedFile(e.target.files[0]);
+      setAnalysisResult(null); // Сброс прошлого результата
+    }
+  };
+
+  const handleDragOver = (e: React.DragEvent) => {
+    e.preventDefault();
+  };
+
+  const handleDrop = (e: React.DragEvent) => {
+    e.preventDefault();
+    if (e.dataTransfer.files && e.dataTransfer.files.length > 0) {
+      setSelectedFile(e.dataTransfer.files[0]);
+      setAnalysisResult(null);
+    }
+  };
+
+  const analyzeFile = async () => {
+    if (!selectedFile) return;
+    setIsAnalyzing(true);
+    try {
+      const baseUrl = process.env.NEXT_PUBLIC_API_URL || '';
+      const formData = new FormData();
+      formData.append('file', selectedFile);
+
+      const res = await fetch(`${baseUrl}/api/analyze`, {
+        method: 'POST',
+        body: formData
+      });
+      const json = await res.json();
+      if (res.ok) {
+        setAnalysisResult(json.data);
+      } else {
+        alert("Ошибка анализа: " + json.error);
+      }
+    } catch (err) {
+      alert("Сетевая ошибка при анализе.");
+    } finally {
+      setIsAnalyzing(false);
+    }
+  };
+
+  const getIcon = (iconName: string) => {
+    switch(iconName) {
+      case 'MonitorOff': return <MonitorOff size={24} />;
+      case 'TrendingUp': return <TrendingUp size={24} />;
+      case 'Layers': return <Layers size={24} />;
+      case 'Scissors': return <Scissors size={24} />;
+      case 'FileWarning': return <FileWarning size={24} />;
+      default: return <Search size={24} />;
+    }
+  };
+
+  if (loading) return <div className={styles.loadingContainer}><div className={styles.spinner}></div><p>Анализ базы данных...</p></div>;
   if (error) return <div className={styles.error}>Ошибка соединения: {error}</div>;
 
-  // Агрегация метрик
   const total = data.length;
   const highRisk = data.filter(d => d.risk_level === 'высокий риск').length;
   const checkRisk = data.filter(d => d.risk_level === 'требует проверки').length;
@@ -88,7 +160,7 @@ export default function Dashboard() {
         <div className={styles.headerTitle}>
           <div className={styles.logoGlow}><Activity size={36} color="#fff" /></div>
           <div>
-            <h1>Hackathon Korkyt Analytics</h1>
+            <h1>Korkyt AI Analytics</h1>
             <p>Модуль ИИ-аудита государственных закупок</p>
           </div>
         </div>
@@ -105,9 +177,86 @@ export default function Dashboard() {
           >
             <DollarSign size={18} /> Анализ Цен
           </button>
+          <button 
+            className={`${styles.tab} ${activeTab === 'upload' ? styles.activeTab : ''}`}
+            onClick={() => setActiveTab('upload')}
+          >
+            <UploadCloud size={18} /> Аудит Файла
+          </button>
         </div>
       </header>
       
+      {activeTab === 'upload' && (
+        <div className={styles.fadeEnter}>
+          <div className={styles.uploadSection}>
+            <div 
+              className={`${styles.dropZone} ${selectedFile ? styles.hasFile : ''}`}
+              onDragOver={handleDragOver}
+              onDrop={handleDrop}
+              onClick={() => fileInputRef.current?.click()}
+            >
+              <input 
+                type="file" 
+                accept=".pdf,.doc,.docx" 
+                ref={fileInputRef} 
+                style={{display: 'none'}} 
+                onChange={handleFileSelect}
+              />
+              <UploadCloud size={48} className={styles.uploadIcon} />
+              {selectedFile ? (
+                <div>
+                  <h3>Файл готов к анализу</h3>
+                  <p>{selectedFile.name}</p>
+                </div>
+              ) : (
+                <div>
+                  <h3>Перетащите PDF договор сюда</h3>
+                  <p>Или нажмите для выбора файла (Кейс: ИТ-услуги, Дробление)</p>
+                </div>
+              )}
+            </div>
+
+            {selectedFile && !analysisResult && (
+              <button 
+                className={styles.analyzeBtn} 
+                onClick={analyzeFile} 
+                disabled={isAnalyzing}
+              >
+                {isAnalyzing ? (
+                  <><div className={styles.btnSpinner}></div> Анализируем...</>
+                ) : (
+                  <><Search size={20} /> Запустить ИИ-Аудит</>
+                )}
+              </button>
+            )}
+          </div>
+
+          {analysisResult && (
+            <div className={`${styles.analysisResultBox} ${styles.fadeEnter}`}>
+              <div className={styles.resultHeader}>
+                <h2>Результаты аудита: {analysisResult.filename}</h2>
+                <div className={`${styles.badge} ${styles.high}`}>Общий риск: Высокий</div>
+              </div>
+
+              <div className={styles.findingsGrid}>
+                {analysisResult.findings.map((f, i) => (
+                  <div key={i} className={styles.findingCard}>
+                    <div className={`${styles.findingIconBox} ${f.risk === 'высокий риск' ? styles.bgRed : styles.bgWarn}`}>
+                      {getIcon(f.icon)}
+                    </div>
+                    <div className={styles.findingContent}>
+                      <span className={styles.findingCategory}>{f.category}</span>
+                      <h4>{f.title}</h4>
+                      <p>{f.description}</p>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+        </div>
+      )}
+
       {activeTab === 'summary' && (
         <div className={styles.fadeEnter}>
           <div className={styles.metricsGrid}>
@@ -169,8 +318,8 @@ export default function Dashboard() {
                 <div className={styles.signalItem}>
                   <div className={styles.signalIcon} style={{background: 'rgba(239, 68, 68, 0.2)', color: '#ef4444'}}><TrendingUp /></div>
                   <div className={styles.signalInfo}>
-                    <h4>Завышение цен</h4>
-                    <p>Контракты с аномальным отклонением от рыночной медианы.</p>
+                    <h4>Завышение цен на ИТ</h4>
+                    <p>Контракты с фиктивной разработкой ПО и оплатой за 'готовый товар'.</p>
                   </div>
                 </div>
                 <div className={styles.signalItem}>
@@ -181,10 +330,10 @@ export default function Dashboard() {
                   </div>
                 </div>
                 <div className={styles.signalItem}>
-                  <div className={styles.signalIcon} style={{background: 'rgba(139, 92, 246, 0.2)', color: '#8b5cf6'}}><FileSearch /></div>
+                  <div className={styles.signalIcon} style={{background: 'rgba(139, 92, 246, 0.2)', color: '#8b5cf6'}}><FileWarning /></div>
                   <div className={styles.signalInfo}>
-                    <h4>Сговор в ТЗ</h4>
-                    <p>Спецификации, заточенные под конкретного поставщика.</p>
+                    <h4>Изменение PDF</h4>
+                    <p>Следы редакторов (Illustrator) в оригинальных договорах.</p>
                   </div>
                 </div>
               </div>

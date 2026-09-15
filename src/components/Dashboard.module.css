@@ -188,7 +188,7 @@
   margin-bottom: 2rem;
 }
 
-.chartBox, .chartBoxFull, .tableBox {
+.chartBox, .chartBoxFull, .tableBox, .uploadSection, .analysisResultBox {
   background: rgba(15, 23, 42, 0.5);
   backdrop-filter: blur(20px);
   border: 1px solid rgba(255, 255, 255, 0.08);
@@ -305,3 +305,163 @@
 
 .textWarn { color: #f5a623; font-weight: 500; }
 .textOk { color: #64748b; }
+
+/* Upload Styles */
+.uploadSection {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 2rem;
+  margin-bottom: 2rem;
+}
+
+.dropZone {
+  width: 100%;
+  max-width: 600px;
+  height: 250px;
+  border: 2px dashed rgba(59, 130, 246, 0.5);
+  border-radius: 20px;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  align-items: center;
+  gap: 1rem;
+  background: rgba(59, 130, 246, 0.05);
+  cursor: pointer;
+  transition: all 0.3s;
+}
+
+.dropZone:hover {
+  background: rgba(59, 130, 246, 0.1);
+  border-color: #3b82f6;
+}
+
+.dropZone.hasFile {
+  border-color: #10b981;
+  background: rgba(16, 185, 129, 0.05);
+}
+
+.uploadIcon {
+  color: #3b82f6;
+}
+
+.hasFile .uploadIcon {
+  color: #10b981;
+}
+
+.dropZone h3 {
+  margin: 0;
+  color: #e2e8f0;
+  font-size: 1.25rem;
+}
+
+.dropZone p {
+  margin: 0;
+  color: #64748b;
+  font-size: 0.95rem;
+}
+
+.analyzeBtn {
+  background: linear-gradient(135deg, #3b82f6, #8b5cf6);
+  color: #fff;
+  border: none;
+  padding: 1rem 2rem;
+  border-radius: 12px;
+  font-size: 1.1rem;
+  font-weight: 600;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  box-shadow: 0 4px 15px rgba(59, 130, 246, 0.4);
+  transition: transform 0.2s, box-shadow 0.2s;
+}
+
+.analyzeBtn:hover:not(:disabled) {
+  transform: translateY(-2px);
+  box-shadow: 0 6px 20px rgba(59, 130, 246, 0.6);
+}
+
+.analyzeBtn:disabled {
+  opacity: 0.7;
+  cursor: not-allowed;
+}
+
+.btnSpinner {
+  width: 20px;
+  height: 20px;
+  border: 2px solid rgba(255,255,255,0.3);
+  border-top-color: #fff;
+  border-radius: 50%;
+  animation: spin 1s linear infinite;
+}
+
+.resultHeader {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 2rem;
+  padding-bottom: 1rem;
+  border-bottom: 1px solid rgba(255,255,255,0.05);
+}
+
+.resultHeader h2 {
+  margin: 0;
+  font-size: 1.5rem;
+  color: #fff;
+}
+
+.findingsGrid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+  gap: 1.5rem;
+}
+
+.findingCard {
+  background: rgba(0,0,0,0.2);
+  border: 1px solid rgba(255,255,255,0.05);
+  border-radius: 16px;
+  padding: 1.5rem;
+  display: flex;
+  gap: 1.5rem;
+}
+
+.findingIconBox {
+  width: 50px;
+  height: 50px;
+  border-radius: 12px;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  flex-shrink: 0;
+}
+
+.bgRed { background: rgba(239, 68, 68, 0.15); color: #ef4444; }
+.bgWarn { background: rgba(245, 166, 35, 0.15); color: #f5a623; }
+
+.findingContent {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.findingCategory {
+  font-size: 0.75rem;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: #94a3b8;
+  font-weight: 600;
+}
+
+.findingContent h4 {
+  margin: 0;
+  color: #e2e8f0;
+  font-size: 1.1rem;
+}
+
+.findingContent p {
+  margin: 0;
+  color: #94a3b8;
+  font-size: 0.9rem;
+  line-height: 1.5;
+}

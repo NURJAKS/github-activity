@@ -1,14 +1,22 @@
 const express = require('express');
 const fs = require('fs');
 const path = require('path');
+const multer = require('multer');
+
 const app = express();
-// Render автоматически передаст свой порт через process.env.PORT
 const PORT = process.env.PORT || 3000;
 
-// Настройка CORS (чтобы твой фронтенд на Vercel не блокировался)
+// Настройка multer для приема файлов (в память)
+const upload = multer({ storage: multer.memoryStorage() });
+
+// Настройка CORS
 app.use((req, res, next) => {
   res.header('Access-Control-Allow-Origin', '*'); 
+  res.header('Access-Control-Allow-Methods', 'GET, POST, OPTIONS');
   res.header('Access-Control-Allow-Headers', 'Origin, X-Requested-With, Content-Type, Accept');
+  if (req.method === 'OPTIONS') {
+    return res.sendStatus(200);
+  }
   next();
 });
 
@@ -33,26 +41,87 @@ const priceComponent = (b) => {
   if (!b || ![RISK_OK, RISK_CHECK, RISK_HIGH].includes(b.risk_level)) return RISK_OK;
   return b.risk_level;
 };
-
 const fragComponent = (cluster) => {
   if (!cluster) return RISK_OK;
   const s = cluster.suspicion_score || 0;
   return s >= 70 ? RISK_HIGH : (s >= 40 ? RISK_CHECK : RISK_OK);
 };
-
 const integrityComponent = (rec) => {
   if (!rec || rec.integrity_score === undefined) return RISK_OK;
   const s = rec.integrity_score;
   return s < 50 ? RISK_HIGH : (s < 80 ? RISK_CHECK : RISK_OK);
 };
-
 const torComponent = (rec) => {
   if (!rec || rec.consistency_score === undefined) return RISK_OK;
   const s = rec.consistency_score;
   return s < 50 ? RISK_HIGH : (s < 80 ? RISK_CHECK : RISK_OK);
 };
 
-// API Endpoint: Возвращает агрегированные данные для дашборда
+// -------------------------------------------------------------
+// НОВЫЙ ЭНДПОИНТ: АНАЛИЗ ЗАГРУЖЕННОГО ДОГОВОРА (MOCK AI)
+// -------------------------------------------------------------
+app.post('/api/analyze', upload.single('file'), (req, res) => {
+  if (!req.file) {
+    return res.status(400).json({ error: 'Файл не найден' });
+  }
+
+  const filename = req.file.originalname;
+  
+  // Имитация работы ИИ (задержка 2.5 секунды для "Вау-эффекта")
+  setTimeout(() => {
+    // В зависимости от имени файла можно отдавать разные результаты, но для демо дадим сочный кейс
+    const analysisResult = {
+      filename: filename,
+      overall_risk: "высокий риск",
+      findings: [
+        {
+          category: "ИТ-разработка (Тех. Спецификация)",
+          risk: "высокий риск",
+          title: "Фиктивная разработка ПО",
+          description: "Выявлено отсутствие технического смысла в спецификации. Продукт описан общими словами, предполагается оплата за 'готовый товар', а не за разработку. Возможна поставка шаблонного Web-решения под видом нативного мобильного приложения.",
+          icon: "MonitorOff"
+        },
+        {
+          category: "Анализ Цен (Завышение)",
+          risk: "высокий риск",
+          title: "Аномальное отклонение цены",
+          description: "Заявленная стоимость услуг на 450% превышает медиану по рынку. Выявлены завышенные статьи расходов на 'сопровождение'.",
+          icon: "TrendingUp"
+        },
+        {
+          category: "Альтернативы на рынке",
+          risk: "требует проверки",
+          title: "Наличие дешевых аналогов",
+          description: "На рынке существуют готовые SaaS решения аналогичного функционала, стоимость которых в 10 раз ниже суммы контракта.",
+          icon: "Layers"
+        },
+        {
+          category: "Дробление закупок",
+          risk: "высокий риск",
+          title: "Искусственное дробление",
+          description: "Связь с 3 другими контрактами от того же заказчика (разница в датах < 5 дней, суммы чуть ниже порога конкурса). Общая сумма цепочки: 94.8 млн тг.",
+          icon: "Scissors"
+        },
+        {
+          category: "Целостность PDF (Integrity)",
+          risk: "требует проверки",
+          title: "Следы редактирования",
+          description: "Метаданные документа указывают на использование Adobe Illustrator после наложения ЭЦП/печатей. Возможна подделка.",
+          icon: "FileWarning"
+        }
+      ]
+    };
+    
+    res.json({
+      status: 'success',
+      data: analysisResult
+    });
+  }, 2500); // 2.5 секунды
+});
+
+// -------------------------------------------------------------
+// ЭНДПОИНТ: СТАРЫЕ ДАННЫЕ ДАШБОРДА
+// -------------------------------------------------------------
 app.get('/api/dashboard-data', (req, res) => {
   const raw = {
     contracts: loadJson('contracts.json'),
@@ -78,7 +147,6 @@ app.get('/api/dashboard-data', (req, res) => {
   const comp = byFile("tor_compliance");
   const integ = byFile("integrity_check");
 
-  // Дробление (берем самый подозрительный кластер для каждого файла)
   const frag = {};
   (raw.fragmentation_clusters || []).forEach(cl => {
     (cl.source_files || []).forEach(sf => {
@@ -98,7 +166,6 @@ app.get('/api/dashboard-data', (req, res) => {
       tor: torComponent(comp[sf])
     };
     
-    // Находим максимальный риск
     let overall = RISK_OK;
     Object.values(parts).forEach(lvl => {
       if (RISK_ORDER[lvl] > RISK_ORDER[overall]) overall = lvl;
@@ -111,34 +178,22 @@ app.get('/api/dashboard-data', (req, res) => {
     if (parts.integrity !== RISK_OK) reasons.push("PDF");
 
     merged.push({
-      source_file: sf,
-      contract: c,
-      alternatives: alts[sf],
-      benchmark: bench[sf],
-      compliance: comp[sf],
-      cluster: frag[sf],
-      integrity: integ[sf],
-      components: parts,
-      risk_level: overall,
-      reasons: reasons
+      source_file: sf, contract: c, alternatives: alts[sf], benchmark: bench[sf],
+      compliance: comp[sf], cluster: frag[sf], integrity: integ[sf],
+      components: parts, risk_level: overall, reasons: reasons
     });
   });
 
   res.json({
     status: 'success',
-    data: {
-      merged: merged,
-      category_stats: raw.category_stats,
-      clusters: raw.fragmentation_clusters
-    }
+    data: { merged, category_stats: raw.category_stats, clusters: raw.fragmentation_clusters }
   });
 });
 
-// Главная страница бэкенда
 app.get('/', (req, res) => {
-  res.send('Бэкенд успешно запущен на Render!');
+  res.send('API Audit Backend is running!');
 });
 
 app.listen(PORT, () => {
-  console.log(`Fake server is running on port ${PORT}`);
+  console.log(`Server is running on port ${PORT}`);
 });
