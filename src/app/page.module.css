@@ -1,0 +1,148 @@
+.container {
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  align-items: center;
+  position: relative;
+  overflow: hidden;
+  padding: 2rem;
+}
+
+.backgroundGlow {
+  position: absolute;
+  width: 600px;
+  height: 600px;
+  background: radial-gradient(circle, rgba(59,130,246,0.3) 0%, rgba(15,23,42,0) 70%);
+  top: -200px;
+  left: -200px;
+  border-radius: 50%;
+  z-index: 0;
+}
+
+.backgroundGlow2 {
+  position: absolute;
+  width: 500px;
+  height: 500px;
+  background: radial-gradient(circle, rgba(139,92,246,0.2) 0%, rgba(15,23,42,0) 70%);
+  bottom: -100px;
+  right: -100px;
+  border-radius: 50%;
+  z-index: 0;
+}
+
+.glassCard {
+  background: rgba(255, 255, 255, 0.05);
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 24px;
+  padding: 3rem;
+  max-width: 800px;
+  width: 100%;
+  z-index: 1;
+  text-align: center;
+  box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.5);
+  animation: fadeIn 1s ease-out;
+}
+
+@keyframes fadeIn {
+  from { opacity: 0; transform: translateY(20px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+.title {
+  font-size: 3.5rem;
+  font-weight: 700;
+  margin-bottom: 1rem;
+  background: linear-gradient(to right, #60a5fa, #c084fc);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+}
+
+.subtitle {
+  font-size: 1.25rem;
+  color: #94a3b8;
+  margin-bottom: 2.5rem;
+  line-height: 1.6;
+}
+
+.grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+  gap: 1.5rem;
+  margin-top: 2rem;
+}
+
+.card {
+  background: rgba(0, 0, 0, 0.2);
+  border: 1px solid rgba(255, 255, 255, 0.05);
+  border-radius: 16px;
+  padding: 2rem;
+  transition: all 0.3s ease;
+  text-align: left;
+}
+
+.card:hover {
+  transform: translateY(-5px);
+  border-color: rgba(96, 165, 250, 0.5);
+  box-shadow: 0 10px 30px -10px rgba(96, 165, 250, 0.3);
+}
+
+.cardTitle {
+  font-size: 1.5rem;
+  font-weight: 600;
+  margin-bottom: 1rem;
+  color: #f8fafc;
+}
+
+.cardText {
+  color: #cbd5e1;
+  margin-bottom: 1.5rem;
+  font-size: 0.95rem;
+  line-height: 1.5;
+}
+
+.button {
+  display: inline-block;
+  padding: 0.75rem 1.5rem;
+  border-radius: 8px;
+  font-weight: 600;
+  transition: all 0.2s ease;
+  cursor: pointer;
+  border: none;
+  font-size: 0.95rem;
+}
+
+.primaryButton {
+  background: linear-gradient(135deg, #3b82f6, #8b5cf6);
+  color: white;
+  box-shadow: 0 4px 15px rgba(59, 130, 246, 0.4);
+}
+
+.primaryButton:hover {
+  transform: scale(1.05);
+  box-shadow: 0 6px 20px rgba(59, 130, 246, 0.6);
+}
+
+.secondaryButton {
+  background: rgba(255, 255, 255, 0.1);
+  color: white;
+  border: 1px solid rgba(255, 255, 255, 0.2);
+}
+
+.secondaryButton:hover {
+  background: rgba(255, 255, 255, 0.15);
+  border-color: rgba(255, 255, 255, 0.3);
+}
+
+.apiResult {
+  margin-top: 1rem;
+  padding: 1rem;
+  background: rgba(0,0,0,0.3);
+  border-radius: 8px;
+  font-family: monospace;
+  font-size: 0.85rem;
+  color: #10b981;
+  word-break: break-all;
+}
