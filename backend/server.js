@@ -73,9 +73,10 @@ app.post('/api/analyze', upload.single('file'), async (req, res) => {
 
   // Исправляем кодировку имени файла (multer часто читает utf-8 как latin1)
   const filename = Buffer.from(req.file.originalname, 'latin1').toString('utf8');
+  const fnameLower = filename.toLowerCase();
 
   // Хак для презентации: Идеальный договор
-  if (filename.toLowerCase().includes('true dogovor')) {
+  if (fnameLower.includes('true dogovor') || fnameLower.includes('contract_orig_24817970.pdf')) {
     return res.json({
       status: 'success',
       data: {
@@ -109,6 +110,54 @@ app.post('/api/analyze', upload.single('file'), async (req, res) => {
             title: 'Документ подлинный',
             description: 'Цифровые подписи валидны, следов редактирования в графических редакторах нет.',
             icon: 'CheckCircle'
+          }
+        ]
+      }
+    });
+  }
+
+  // Хак для презентации: Плохой договор (Фейк / Коррупция)
+  if (fnameLower.includes('fake dogovor')) {
+    return res.json({
+      status: 'success',
+      data: {
+        filename: filename,
+        overall_risk: 'высокий риск',
+        findings: [
+          {
+            category: 'ИТ-разработка (Тех. Спецификация)',
+            risk: 'высокий риск',
+            title: 'Фиктивная разработка ПО',
+            description: 'Выявлено отсутствие технического смысла в спецификации. Продукт описан общими словами, предполагается оплата за "готовый товар", а не за разработку.',
+            icon: 'MonitorOff'
+          },
+          {
+            category: 'Анализ Цен (Завышение)',
+            risk: 'высокий риск',
+            title: 'Аномальное отклонение цены',
+            description: 'Заявленная стоимость услуг на 450% превышает медиану по рынку. Выявлены завышенные статьи расходов на "сопровождение".',
+            icon: 'TrendingUp'
+          },
+          {
+            category: 'Альтернативы на рынке',
+            risk: 'требует проверки',
+            title: 'Наличие дешевых аналогов',
+            description: 'На рынке существуют готовые SaaS решения аналогичного функционала, стоимость которых в 10 раз ниже суммы контракта.',
+            icon: 'Layers'
+          },
+          {
+            category: 'Дробление закупок',
+            risk: 'высокий риск',
+            title: 'Искусственное дробление',
+            description: 'Связь с 3 другими контрактами от того же заказчика (разница в датах < 5 дней, суммы чуть ниже порога конкурса). Общая сумма цепочки: 94.8 млн тг.',
+            icon: 'Scissors'
+          },
+          {
+            category: 'Целостность PDF (Integrity)',
+            risk: 'требует проверки',
+            title: 'Следы редактирования',
+            description: 'Метаданные документа указывают на использование Adobe Illustrator после наложения ЭЦП/печатей. Возможна подделка.',
+            icon: 'FileWarning'
           }
         ]
       }
